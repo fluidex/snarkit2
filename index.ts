@@ -1,6 +1,5 @@
 import { WitnessGenerator } from './src/witness_generator';
 import * as path from 'path';
-import * as utils from './src/utils';
 const walkSync = require('walk-sync');
 
 async function compileCircuitDir(circuitDir, options) {
@@ -31,4 +30,4 @@ async function testCircuitDir(circuitDir, dataDir, options) {
   }
 }
 
-export { compileCircuitDir, testCircuitDir, utils };
+export { compileCircuitDir, testCircuitDir };

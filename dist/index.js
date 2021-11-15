@@ -1,10 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.utils = exports.testCircuitDir = exports.compileCircuitDir = void 0;
+exports.testCircuitDir = exports.compileCircuitDir = void 0;
 const witness_generator_1 = require("./src/witness_generator");
 const path = require("path");
-const utils = require("./src/utils");
-exports.utils = utils;
 const walkSync = require('walk-sync');
 async function compileCircuitDir(circuitDir, options) {
     const circuitName = path.basename(circuitDir);
