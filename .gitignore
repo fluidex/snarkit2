@@ -22,3 +22,5 @@ fr.o
 main.cpp
 utils.cpp
 utils.hpp
+circuit_cpp
+circuit_js

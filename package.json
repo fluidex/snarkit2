@@ -1,20 +1,20 @@
 {
-  "name": "snarkit",
-  "version": "0.0.11",
+  "name": "snarkit2",
+  "version": "0.2.0",
   "description": "A command line tool to test circom circuit with given inputs/outputs",
   "main": "./dist/index.js",
   "bin": {
-    "snarkit": "./dist/cli.js"
+    "snarkit2": "./dist/cli.js"
   },
   "build": "npx tsc",
   "scripts": {
     "fmt": "npx prettier --write \"**/*.{js,ts}\"",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "docker": "docker buildx build --platform linux/amd64 --load -t fluidex/snarkit ."
+    "docker": "docker buildx build --platform linux/amd64 --load -t fluidex/snarkit2 ."
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fluidex/snarkit.git"
+    "url": "git+https://github.com/fluidex/snarkit2.git"
   },
   "keywords": [
     "circom",
@@ -23,14 +23,12 @@
   "author": "lispczz",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/fluidex/snarkit/issues"
+    "url": "https://github.com/fluidex/snarkit2/issues"
   },
-  "homepage": "https://github.com/fluidex/snarkit#readme",
+  "homepage": "https://github.com/fluidex/snarkit2#readme",
   "dependencies": {
     "@iden3/binfileutils": "^0.0.8",
     "chai": "^4.3.4",
-    "circom": "^0.5.42",
-    "circom_runtime": "^0.1.12",
     "commander": "^7.2.0",
     "ffiasm": "^0.1.1",
     "ffjavascript": "^0.2.35",
@@ -44,6 +42,7 @@
   "devDependencies": {
     "@types/node": "^14.14.35",
     "prettier": "^2.2.1",
+    "ts-node": "^10.4.0",
     "typescript": "^4.2.3"
   }
 }

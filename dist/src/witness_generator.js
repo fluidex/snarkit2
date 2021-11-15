@@ -8,7 +8,6 @@ const si = require('systeminformation');
 const crypto = require('crypto');
 const { stringifyBigInts, unstringifyBigInts } = require('ffjavascript').utils;
 const { wtns } = require('snarkjs');
-const crypto_1 = require("./crypto");
 //import {compiler} from "circom";
 //const Scalar = require("ffjavascript").Scalar;
 const DEFAULT_NODE_ARGS = '--max-old-space-size=8192 --stack-size=65500';
@@ -26,12 +25,18 @@ function shellExecFnBuilder(verbose) {
     }
     return shellExec;
 }
+function getCircomCli() {
+    let circomcliPath = shelljs.which('circom');
+    if (!circomcliPath) {
+        throw new Error('circom is not installed. please install it following https://github.com/iden3/circom');
+    }
+    return circomcliPath;
+}
 async function compileWasmBinary({ circuitDirName, r1csFilepath, circuitFilePath, symFilepath, binaryFilePath, verbose }) {
     const shellExec = shellExecFnBuilder(verbose);
-    const circomcliPath = process.env.CIRCOM_CLI || path.join(require.resolve('circom'), '..', 'cli.js');
     const isWindowsShell = process.platform === 'win32';
     let cmd;
-    cmd = `${NODE_CMD} ${circomcliPath} ${circuitFilePath} -r ${r1csFilepath} -w ${binaryFilePath} -s ${symFilepath}`;
+    cmd = `${getCircomCli()} --r1cs  --wasm --sym --output ${circuitDirName} ${circuitFilePath} `;
     if (verbose) {
         if (!isWindowsShell) {
             cmd = '/usr/bin/time ' + (process.platform === 'linux' ? '-v' : '-l') + ' ' + cmd;
@@ -39,7 +44,7 @@ async function compileWasmBinary({ circuitDirName, r1csFilepath, circuitFilePath
         else {
             console.warn('in windows we can not timing the compilation');
         }
-        cmd += ' -v';
+        //cmd += ' -v';
     }
     shellExec(cmd, { fatal: true });
     if (isEmptyFile(binaryFilePath)) {
@@ -48,56 +53,15 @@ async function compileWasmBinary({ circuitDirName, r1csFilepath, circuitFilePath
 }
 async function generateSrcsForNativeBinary({ circuitDirName, r1csFilepath, circuitFilePath, symFilepath, verbose, alwaysRecompile }) {
     const shellExec = shellExecFnBuilder(verbose);
-    const circomRuntimePath = path.join(require.resolve('circom_runtime'), '..', '..', 'c');
-    const ffiasmPath = path.join(require.resolve('ffiasm'), '..');
-    const circomcliPath = process.env.CIRCOM_CLI || path.join(require.resolve('circom'), '..', 'cli.js');
-    const cFilepath = path.join(circuitDirName, 'circuit.cpp');
+    const cFilepath = path.join(circuitDirName, 'circuit_cpp', 'circuit.cpp');
     if (!alwaysRecompile && fs.existsSync(cFilepath) && fs.statSync(cFilepath).size > 0) {
         if (verbose) {
             console.log('skip generate c src', cFilepath);
         }
         return;
     }
-    let cmd;
-    const buildzqfield = path.join(ffiasmPath, 'src', 'buildzqfield.js');
-    cmd = `node ${buildzqfield} -q ${crypto_1.groupOrderPrimeStr} -n Fr`;
-    shellExec(cmd, { cwd: circuitDirName });
-    if (process.arch !== 'x64') {
-        throw 'Unsupported platform ' + process.arch + '. Try wasm backend as an alternative';
-    }
-    if (process.platform === 'darwin') {
-        cmd = `nasm -fmacho64 --prefix _  ${circuitDirName}/fr.asm`;
-    }
-    else if (process.platform === 'linux') {
-        cmd = `nasm -felf64 ${circuitDirName}/fr.asm`;
-    }
-    else if (process.platform === 'win32') {
-        cmd = `nasm -fwin64 ${circuitDirName}\\fr.asm -o ${circuitDirName}\\fr.o`;
-    }
-    else
-        throw 'Unsupported platform';
-    shellExec(cmd);
     const isWindowsShell = process.platform === 'win32';
-    const circomRuntimePathNR = path.normalize(`${circomRuntimePath}/`);
-    if (isWindowsShell) {
-        cmd = `copy /Y ${circomRuntimePathNR}*.cpp ${circuitDirName}`;
-        shellExec(cmd);
-        cmd = `copy /Y ${circomRuntimePathNR}*.hpp ${circuitDirName}`;
-        shellExec(cmd);
-        //we need to copy some hacking stuff ...
-        const hackingRuntimePath = path.join(path.resolve(__dirname), '..', '..', 'win32', 'runtime');
-        cmd = `copy /Y ${hackingRuntimePath}\\*.hpp ${circuitDirName}`;
-        shellExec(cmd);
-        cmd = `copy /Y ${hackingRuntimePath}\\*.cpp ${circuitDirName}`;
-        shellExec(cmd);
-    }
-    else {
-        cmd = `cp ${circomRuntimePathNR}*.cpp ${circuitDirName}`;
-        shellExec(cmd);
-        cmd = `cp ${circomRuntimePathNR}*.hpp ${circuitDirName}`;
-        shellExec(cmd);
-    }
-    cmd = `${NODE_CMD} ${circomcliPath} ${circuitFilePath} -r ${r1csFilepath} -c ${cFilepath} -s ${symFilepath}`;
+    let cmd = `${getCircomCli()} --r1cs -c --sym --output ${circuitDirName} ${circuitFilePath}`;
     if (verbose) {
         if (!isWindowsShell) {
             cmd = '/usr/bin/time ' + (process.platform === 'linux' ? '-v' : '-l') + ' ' + cmd;
@@ -105,7 +69,6 @@ async function generateSrcsForNativeBinary({ circuitDirName, r1csFilepath, circu
         else {
             console.warn('in windows we can not timing the compilation');
         }
-        cmd += ' -v';
     }
     shellExec(cmd, { fatal: true });
     if (isEmptyFile(cFilepath)) {
@@ -128,23 +91,24 @@ async function generateSrcsForNativeBinary({ circuitDirName, r1csFilepath, circu
 async function compileNativeBinary({ circuitDirName, r1csFilepath, circuitFilePath, symFilepath, binaryFilePath, verbose, sanityCheck, alwaysRecompile, }) {
     await generateSrcsForNativeBinary({ circuitDirName, r1csFilepath, circuitFilePath, symFilepath, verbose, alwaysRecompile });
     const shellExec = shellExecFnBuilder(verbose);
-    let compileCmd = `g++ main.cpp calcwit.cpp utils.cpp fr.cpp fr.o circuit.cpp -o ${binaryFilePath} -lgmp -std=c++14 -O3`;
+    //let compileCmd = `g++ main.cpp calcwit.cpp utils.cpp fr.cpp fr.o circuit.cpp -o ${binaryFilePath} -lgmp -std=c++11 -O3`;
+    let compileCmd = `make`;
     if (process.platform === 'darwin') {
         // do nothing
     }
     else if (process.platform === 'linux') {
-        compileCmd += ' -pthread -fopenmp';
+        // compileCmd += ' -pthread -fopenmp';
     }
     else if (process.platform === 'win32') {
-        compileCmd += ' -lmman';
+        // compileCmd += ' -lmman';
     }
     else {
         throw 'Unsupported platform';
     }
     if (sanityCheck) {
-        compileCmd += ' -DSANITY_CHECK';
+        //compileCmd += ' -DSANITY_CHECK';
     }
-    shellExec(compileCmd, { cwd: `${circuitDirName}` });
+    shellExec(compileCmd, { cwd: `${path.join(circuitDirName, 'circuit_cpp')}` });
 }
 // Calculate md5 checksum for given set of src files.
 function calculateSrcHashes(contents) {
@@ -199,8 +163,6 @@ function isSrcHashesEqual(srcHashes, oldSrcHashes) {
 }
 // Check whether the src files are changed between this run and last compile.
 function checkSrcChanged(src) {
-    const circomDir = require.resolve('circom');
-    const parser = require(path.join(circomDir, '..', 'parser/jaz.js')).parser;
     const srcContents = new Map();
     traverse(src);
     const srcHashes = calculateSrcHashes(srcContents);
@@ -215,13 +177,13 @@ function checkSrcChanged(src) {
     function traverse(src) {
         const content = fs.readFileSync(src, 'utf8');
         srcContents.set(src, content);
-        const ast = parser.parse(content);
-        for (const stat of ast.statements) {
-            if (stat.type == 'INCLUDE') {
-                let includedFile = stat.file;
+        for (const line of content.split("\n")) {
+            if (line.startsWith("include")) {
+                let includedFile = line.split(" ")[1];
                 if (!path.isAbsolute(includedFile)) {
                     includedFile = path.normalize(path.join(src, '..', includedFile));
                 }
+                console.log("include", includedFile);
                 if (!srcContents.has(includedFile)) {
                     traverse(includedFile);
                 }
@@ -236,18 +198,13 @@ async function compileCircuitDir(circuitDirName, { alwaysRecompile, verbose, bac
     const symFilepath = path.join(circuitDirName, 'circuit.sym');
     let binaryFilePath;
     if (backend === 'native') {
-        if (sanityCheck) {
-            binaryFilePath = path.join(circuitDirName, 'circuit');
-        }
-        else {
-            binaryFilePath = path.join(circuitDirName, 'circuit.fast');
-        }
+        binaryFilePath = path.join(circuitDirName, 'circuit_cpp', 'circuit');
         if (process.platform === 'win32') {
             binaryFilePath += '.exe';
         }
     }
     else {
-        binaryFilePath = path.join(circuitDirName, 'circuit.wasm');
+        binaryFilePath = path.join(circuitDirName, 'circuit_js', 'circuit.wasm');
     }
     if (!alwaysRecompile &&
         fs.existsSync(binaryFilePath) &&
@@ -348,7 +305,6 @@ class WitnessGenerator {
             }
         }
         else {
-            const snarkjsPath = path.join(require.resolve('snarkjs'), '..', 'cli.cjs');
             let witnessBinFile;
             if (witnessFilePath.endsWith('.json')) {
                 witnessBinFile = witnessFilePath.replace(/json$/, 'wtns');
@@ -356,18 +312,22 @@ class WitnessGenerator {
             else {
                 witnessBinFile = witnessFilePath;
             }
+            const witGenScript = path.join(this.circuitDirName, "circuit_js", "generate_witness.js");
             // calculate witness bin file
-            const sameProcess = process.platform !== 'win32';
-            if (sameProcess) {
-                const input = unstringifyBigInts(JSON.parse(await fs.promises.readFile(inputFilePath, 'utf8')));
-                await wtns.calculate(input, this.binaryFilePath, witnessBinFile, defaultWitnessOption());
+            // generate_witness.js only accepts relative path without "./"
+            //let relativeInputPath = path.relative(path.dirname(witGenScript), inputFilePath);
+            //relativeInputPath = relativeInputPath.replace(/^\.\//, '');
+            cmd = `${NODE_CMD} ${witGenScript} ${this.binaryFilePath} ${inputFilePath} ${witnessBinFile}`;
+            if (this.verbose) {
+                console.log(cmd);
             }
-            else {
-                cmd = `${NODE_CMD} ${snarkjsPath} wc ${this.binaryFilePath} ${inputFilePath} ${witnessBinFile}`;
-                shelljs.exec(cmd);
+            let res = shelljs.exec(cmd, { fatal: true, silent: true });
+            if (res.code != 0) {
+                throw res.stderr;
             }
             // convert bin witness to json witness if needed
             if (witnessFilePath.endsWith('.json')) {
+                const snarkjsPath = path.join(require.resolve('snarkjs'), '..', 'cli.cjs');
                 cmd = `${NODE_CMD} ${snarkjsPath} wej ${witnessBinFile} ${witnessFilePath}`;
                 shelljs.exec(cmd);
             }
@@ -375,17 +335,4 @@ class WitnessGenerator {
     }
 }
 exports.WitnessGenerator = WitnessGenerator;
-function defaultWitnessOption() {
-    let logFn = console.log;
-    let calculateWitnessOptions = {
-        sanityCheck: true,
-        logTrigger: logFn,
-        logOutput: logFn,
-        logStartComponent: logFn,
-        logFinishComponent: logFn,
-        logSetSignal: logFn,
-        logGetSignal: logFn,
-    };
-    return calculateWitnessOptions;
-}
 //# sourceMappingURL=witness_generator.js.map
