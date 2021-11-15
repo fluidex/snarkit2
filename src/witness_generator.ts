@@ -72,7 +72,7 @@ async function compileCircuitDir(circuitDirName, { forceRecompile, verbose, back
   } else {
     binaryFilePath = path.join(circuitDirName, 'circuit_js', 'circuit.wasm');
   }
-  if (forceRecompile || isEmptyFile(binaryFilePath)) {
+  if (!isEmptyFile(binaryFilePath) && !forceRecompile) {
     if (verbose) {
       console.log('skip compiling binary ', binaryFilePath);
     }
