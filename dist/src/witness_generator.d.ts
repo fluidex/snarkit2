@@ -1,8 +1,7 @@
-declare function compileCircuitDir(circuitDirName: any, { alwaysRecompile, verbose, backend, sanityCheck }: {
-    alwaysRecompile: any;
+declare function compileCircuitDir(circuitDirName: any, { forceRecompile, verbose, backend }: {
+    forceRecompile: any;
     verbose: any;
     backend: any;
-    sanityCheck: any;
 }): Promise<{
     circuitFilePath: string;
     r1csFilepath: string;
@@ -15,16 +14,15 @@ declare class WitnessGenerator {
     name: string;
     circuitDirName: string;
     binaryFilePath: string;
-    alwaysRecompile: boolean;
+    forceRecompile: boolean;
     sanityCheck: boolean;
     verbose: boolean;
     writeExpectedOutput: boolean;
     backend: string;
-    constructor(name: any, { backend, alwaysRecompile, verbose, sanityCheck }?: {
+    constructor(name: any, { backend, forceRecompile, verbose }?: {
         backend: string;
-        alwaysRecompile: boolean;
+        forceRecompile: boolean;
         verbose: boolean;
-        sanityCheck: boolean;
     });
     chooseBackend(): Promise<"native" | "wasm">;
     compile(circuitDirName: any): Promise<{
