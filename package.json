@@ -30,6 +30,7 @@
     "@iden3/binfileutils": "^0.0.8",
     "chai": "^4.3.4",
     "commander": "^7.2.0",
+    "dotenv": "^10.0.0",
     "ffiasm": "^0.1.1",
     "ffjavascript": "^0.2.35",
     "r1csfile": "0.0.16",

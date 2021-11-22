@@ -35,7 +35,7 @@ function shellExec(cmd, verbose, printRunTime = false, fatal = true, shelljsOpti
     }
 }
 function getCircomCli() {
-    let circomcliPath = shelljs.which('circom');
+    let circomcliPath = process.env.CIRCOM_PATH || shelljs.which('circom');
     if (!circomcliPath) {
         throw new Error('circom is not installed. please install it following https://github.com/iden3/circom');
     }
