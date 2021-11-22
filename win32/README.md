@@ -8,6 +8,21 @@ We can just install the porting version:
 
 You can use the ported circom globally or specify the command path of it by `CIRCOM_PATH` from environment variables
 
+# Command hacking for snarkjs
+
+We need an small hacking on the underlying snarkjs to make it work under windows:
+
+```js
+//Line 146@snarkjs/build/cli.cjs
+
+/*
+import pkg from "../package.json";
+const version = pkg.version;
+*/
+//const __dirname$1 = path__default['default'].dirname(new URL((typeof document === 'undefined' ? new (require('u' + 'rl').URL)('file:' + __filename).href : (document.currentScript && document.currentScript.src || new URL('cli.cjs', document.baseURI).href))).pathname);
+const __dirname$1 = __dirname
+```
+
 # Generate witness by native backend
 
   It is not a trivial job to get ready for a enviroment which can be used to generate native backend code and you should follow the following instructions:
