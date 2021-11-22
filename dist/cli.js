@@ -3,7 +3,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const index_1 = require("./index");
 const commander_1 = require("commander");
+const dotenv_1 = require("dotenv");
 async function main() {
+    (0, dotenv_1.config)();
     try {
         const program = new commander_1.Command();
         program.version('0.2.0');

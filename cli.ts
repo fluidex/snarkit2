@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import { compileCircuitDir, testCircuitDir } from './index';
 import { Command } from 'commander';
+import { config } from 'dotenv';
 
 async function main() {
+  config();
   try {
     const program = new Command();
     program.version('0.2.0');
