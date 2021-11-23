@@ -29,6 +29,6 @@ declare class WitnessGenerator {
         r1csFilepath: string;
         symFilepath: string;
     }>;
-    generateWitness(inputFilePath: string, witnessFilePath: string): Promise<void>;
+    generateWitness(inputFilePath: string, witnessFile: string, toJSON: boolean): Promise<void>;
 }
 export { WitnessGenerator, compileCircuitDir };

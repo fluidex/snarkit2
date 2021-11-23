@@ -132,37 +132,28 @@ class WitnessGenerator {
         this.binaryFilePath = binaryFilePath;
         return { r1csFilepath, symFilepath };
     }
-    async generateWitness(inputFilePath, witnessFilePath) {
+    async generateWitness(inputFilePath, witnessFile, toJSON) {
         var cmd;
         if (this.binaryFilePath == '' || !fs.existsSync(this.binaryFilePath)) {
             throw new Error('invalid bin ' + this.binaryFilePath + '. Has the circuit been compiled?');
         }
-        if (!witnessFilePath.endsWith('.json') && !witnessFilePath.endsWith('.wtns')) {
-            throw new Error('invalid witness file type');
-        }
         // gen witness
+        let witnessBinFile = `${witnessFile}.wtns`;
         if (this.backend === 'native') {
-            cmd = `${this.binaryFilePath} ${inputFilePath} ${witnessFilePath}`;
+            cmd = `${this.binaryFilePath} ${inputFilePath} ${witnessBinFile}`;
             shellExec(cmd, this.verbose);
         }
         else {
             // wasm cannot produce json witness file
-            let witnessBinFile;
-            if (witnessFilePath.endsWith('.json')) {
-                witnessBinFile = witnessFilePath.replace(/json$/, 'wtns');
-            }
-            else {
-                witnessBinFile = witnessFilePath;
-            }
             const witGenScript = path.join(this.circuitDirName, 'circuit_js', 'generate_witness.js');
             cmd = `node ${witGenScript} ${this.binaryFilePath} ${inputFilePath} ${witnessBinFile}`;
             shellExec(cmd, this.verbose);
-            // convert bin witness to json witness if needed
-            if (witnessFilePath.endsWith('.json')) {
-                const snarkjsPath = path.join(require.resolve('snarkjs'), '..', 'cli.cjs');
-                cmd = `node ${snarkjsPath} wej ${witnessBinFile} ${witnessFilePath}`;
-                shellExec(cmd, {}, this.verbose);
-            }
+        }
+        // convert bin witness to json witness if needed
+        if (toJSON) {
+            const snarkjsPath = path.join(require.resolve('snarkjs'), '..', 'cli.cjs');
+            cmd = `node ${snarkjsPath} wej ${witnessBinFile} ${witnessFile}.json`;
+            shellExec(cmd, {}, this.verbose);
         }
     }
 }
